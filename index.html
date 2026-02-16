@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="utf-8">
+    <title>Futuristic VR Saber</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://unpkg.com/aframe-environment-component/dist/aframe-environment-component.min.js"></script>
   </head>
@@ -8,70 +10,89 @@
     <a-scene vr-mode-ui="enabled: true">
       
       <a-assets>
-        <audio id="sliceSound" src="https://cdn.glitch.com/sounds/slice.mp3"></audio>
+        <audio id="sliceSound" src="https://cdn.glitch.com/sounds/slice.mp3" preload="auto"></audio>
       </a-assets>
 
-      <a-entity environment="preset: night; neonColor: cyan; ground: hills;"></a-entity>
+      <a-entity environment="preset: night; neonColor: blue; ground: hills; lighting: point;"></a-entity>
 
       <a-entity id="rig" position="0 1.6 0" look-controls>
-        <a-entity camera position="0 0 0">
+        <a-entity camera>
           
-          <a-entity cursor="fuse: true; fuseTimeout: 5000"
+          <a-entity id="dot"
+                    cursor="fuse: true; fuseTimeout: 5000"
                     position="0 0 -1"
-                    geometry="primitive: ring; radiusInner: 0.015; radiusOuter: 0.02"
-                    material="color: black; shader: flat">
+                    geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.02"
+                    material="color: black; shader: flat"
+                    raycaster="objects: .clickable">
             <a-animation begin="fusing" easing="ease-in" attribute="scale"
-                         fill="forwards" from="1 1 1" to="0.1 0.1 0.1" dur="5000"></a-animation>
+                         fill="forwards" from="1 1 1" to="0.2 0.2 0.2" dur="5000"></a-animation>
           </a-entity>
 
         </a-entity>
 
         <a-entity id="saber-hand" position="0.4 -0.5 -0.8">
-            <a-cylinder height="0.25" radius="0.03" color="#111" metalness="1"></a-cylinder>
-            <a-cylinder height="0.9" radius="0.02" color="cyan" emissive="cyan" position="0 0.55 0">
-                <a-sphere radius="0.02" position="0 0.45 0" color="cyan" emissive="cyan"></a-sphere>
+            <a-cylinder height="0.25" radius="0.03" color="#0a0a0a" metalness="1" roughness="0.1"></a-cylinder>
+            
+            <a-cylinder height="0.9" radius="0.02" color="#00ffff" emissive="#00ffff" emissiveIntensity="3" position="0 0.55 0">
+                <a-sphere radius="0.02" position="0 0.45 0" color="#00ffff" emissive="#00ffff"></a-sphere>
             </a-cylinder>
         </a-entity>
       </a-entity>
 
       <a-entity id="menu" position="0 1.5 -3">
-          <a-box id="btn-start" class="clickable" width="1.5" height="0.6" depth="0.1" color="#222"
-                 onclick="startGame()">
-              <a-text value="LEVEL 01" align="center" position="0 0 0.12" color="cyan"></a-text>
+          <a-box id="start-button" class="clickable" width="1.5" height="0.6" depth="0.1" color="#111"
+                 onclick="onSelect()">
+              <a-text value="START LEVEL" align="center" position="0 0 0.12" color="cyan" width="4"></a-text>
           </a-box>
+      </a-entity>
+
+      <a-entity id="game-level" visible="false">
+          <a-box class="clickable" position="0 1.5 -10" color="red" animation="property: position; to: 0 1.5 2; dur: 5000; easing: linear; loop: true"></a-box>
       </a-entity>
 
     </a-scene>
 
     <script>
+      const menu = document.querySelector('#menu');
+      const gameLevel = document.querySelector('#game-level');
       const saber = document.querySelector('#saber-hand');
 
-      // Connect Arduino via Bluetooth
-      window.addEventListener('click', async () => {
-        const device = await navigator.bluetooth.requestDevice({
-          filters: [{ name: 'HC-05' }],
-          optionalServices: ['0000ffe0-0000-1000-8000-00805f9b34fb']
-        });
-        const server = await device.gatt.connect();
-        const service = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
-        const char = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
-        
-        char.startNotifications();
-        char.addEventListener('characteristicvaluechanged', (e) => {
-          let val = new TextDecoder().decode(e.target.value);
-          let coords = val.split(','); // Arduino sends "X,Y"
-          let xMove = (parseInt(coords[0]) - 150) / 100;
-          let yMove = (parseInt(coords[1]) - 150) / 100;
-          
-          // Moves the saber relative to where you are looking
-          saber.setAttribute('position', {x: xMove + 0.4, y: yMove - 0.5, z: -0.8});
-        });
-      });
-
-      function startGame() {
-        document.querySelector('#menu').setAttribute('visible', 'false');
-        console.log("5 Seconds Over: Game Starting!");
+      // FUNCTION: Runs when Dot stays on button for 5 seconds
+      function onSelect() {
+        menu.setAttribute('visible', 'false');
+        gameLevel.setAttribute('visible', 'true');
+        console.log("Selection confirmed by gaze!");
       }
+
+      // ARDUINO BLUETOOTH CONNECTION
+      window.addEventListener('click', async () => {
+        // Request sensors for head tracking
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission();
+        }
+
+        try {
+          const device = await navigator.bluetooth.requestDevice({
+            filters: [{ name: 'HC-05' }],
+            optionalServices: ['0000ffe0-0000-1000-8000-00805f9b34fb']
+          });
+          const server = await device.gatt.connect();
+          const service = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
+          const char = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
+          
+          char.startNotifications();
+          char.addEventListener('characteristicvaluechanged', (e) => {
+            let val = new TextDecoder().decode(e.target.value);
+            let parts = val.split(',');
+            // Mapping Arduino X,Y to 3D Space
+            let targetX = (parseInt(parts[0]) - 150) / 100;
+            let targetY = (parseInt(parts[1]) - 150) / 100;
+            saber.setAttribute('position', {x: targetX + 0.4, y: targetY - 0.5, z: -0.8});
+          });
+        } catch (err) {
+          console.log("Bluetooth Error: " + err);
+        }
+      });
     </script>
   </body>
 </html>
