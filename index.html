@@ -8,44 +8,46 @@
     <a-scene vr-mode-ui="enabled: true">
       
       <a-assets>
-        <audio id="sliceSound" src="https://cdn.glitch.com/sounds/slice.mp3" preload="auto"></audio>
+        <audio id="sliceSound" src="https://cdn.glitch.com/sounds/slice.mp3"></audio>
       </a-assets>
 
-      <a-entity environment="preset: contact; neonColor: blue; ground: hills; lighting: point;"></a-entity>
+      <a-entity environment="preset: night; neonColor: cyan; ground: hills;"></a-entity>
 
-      <a-entity id="rig" position="0 1.6 0" look-controls="pointerLockEnabled: true">
-        <a-entity camera position="0 0 0"></a-entity>
-        
+      <a-entity id="rig" position="0 1.6 0" look-controls>
+        <a-entity camera position="0 0 0">
+          
+          <a-entity cursor="fuse: true; fuseTimeout: 5000"
+                    position="0 0 -1"
+                    geometry="primitive: ring; radiusInner: 0.015; radiusOuter: 0.02"
+                    material="color: black; shader: flat">
+            <a-animation begin="fusing" easing="ease-in" attribute="scale"
+                         fill="forwards" from="1 1 1" to="0.1 0.1 0.1" dur="5000"></a-animation>
+          </a-entity>
+
+        </a-entity>
+
         <a-entity id="saber-hand" position="0.4 -0.5 -0.8">
-            <a-cylinder height="0.25" radius="0.03" color="#0a0a0a" metalness="1" roughness="0.1" position="0 0 0" rotation="0 0 0"></a-cylinder>
-            
-            <a-cylinder id="blade" height="0.9" radius="0.02" color="#00ffff" emissive="#00ffff" emissiveIntensity="3" position="0 0.55 0">
-                <a-sphere radius="0.02" position="0 0.45 0" color="#00ffff" emissive="#00ffff"></a-sphere>
+            <a-cylinder height="0.25" radius="0.03" color="#111" metalness="1"></a-cylinder>
+            <a-cylinder height="0.9" radius="0.02" color="cyan" emissive="cyan" position="0 0.55 0">
+                <a-sphere radius="0.02" position="0 0.45 0" color="cyan" emissive="cyan"></a-sphere>
             </a-cylinder>
         </a-entity>
       </a-entity>
 
       <a-entity id="menu" position="0 1.5 -3">
-          <a-box id="level-btn" width="1.2" height="0.5" depth="0.1" color="#111" metalness="0.5">
-              <a-text value="LEVEL 01" align="center" position="0 0 0.12" color="cyan" width="4"></a-text>
-              <a-plane id="fill" color="cyan" height="0.05" width="0" position="0 -0.3 0.13"></a-plane>
+          <a-box id="btn-start" class="clickable" width="1.5" height="0.6" depth="0.1" color="#222"
+                 onclick="startGame()">
+              <a-text value="LEVEL 01" align="center" position="0 0 0.12" color="cyan"></a-text>
           </a-box>
       </a-entity>
 
     </a-scene>
 
     <script>
-      let hoverTime = 0;
       const saber = document.querySelector('#saber-hand');
-      const fill = document.querySelector('#fill');
 
-      // 1. BLUETOOTH DATA HANDLING (Arduino -> Saber)
+      // Connect Arduino via Bluetooth
       window.addEventListener('click', async () => {
-        // Permissions for Gyroscope on Android 8
-        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-           DeviceOrientationEvent.requestPermission();
-        }
-
         const device = await navigator.bluetooth.requestDevice({
           filters: [{ name: 'HC-05' }],
           optionalServices: ['0000ffe0-0000-1000-8000-00805f9b34fb']
@@ -57,42 +59,19 @@
         char.startNotifications();
         char.addEventListener('characteristicvaluechanged', (e) => {
           let val = new TextDecoder().decode(e.target.value);
-          let parts = val.split(','); // Expecting "X,Y" from Arduino
+          let coords = val.split(','); // Arduino sends "X,Y"
+          let xMove = (parseInt(coords[0]) - 150) / 100;
+          let yMove = (parseInt(coords[1]) - 150) / 100;
           
-          // MAP DATA TO 3D COORDINATES
-          let targetX = (parseInt(parts[0]) - 150) / 100;
-          let targetY = (parseInt(parts[1]) - 150) / 100;
-          
-          // SMOOTH TRANSITION
-          saber.setAttribute('position', {x: targetX + 0.4, y: targetY - 0.5, z: -0.8});
+          // Moves the saber relative to where you are looking
+          saber.setAttribute('position', {x: xMove + 0.4, y: yMove - 0.5, z: -0.8});
         });
       });
 
-      // 2. GAME LOOP (Menu Selection & Interaction)
-      function tick(t, dt) {
-        let pos = saber.getAttribute('position');
-        
-        // If saber tip is pointing at the button
-        if (Math.abs(pos.x - 0.4) < 0.3 && Math.abs(pos.y + 0.2) < 0.3) {
-          hoverTime += dt;
-          fill.setAttribute('width', (hoverTime/5000) * 1.2);
-          if (hoverTime >= 5000) {
-            startGame();
-            hoverTime = 0;
-          }
-        } else {
-          hoverTime = 0;
-          fill.setAttribute('width', 0);
-        }
-        requestAnimationFrame(tick);
-      }
-
       function startGame() {
         document.querySelector('#menu').setAttribute('visible', 'false');
-        // Logic to start spawning blocks
+        console.log("5 Seconds Over: Game Starting!");
       }
-
-      requestAnimationFrame(tick);
     </script>
   </body>
 </html>
