@@ -1,84 +1,77 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Beat VR Arduino Pro</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <script src="https://unpkg.com/aframe-environment-component/dist/aframe-environment-component.min.js"></script>
+    <script src="https://unpkg.com/aframe-environment-component@1.2.0/dist/aframe-environment-component.min.js"></script>
 </head>
 <body>
-    <a-scene vr-mode-ui="enabled: true" shadow="type: pcfsoft">
-        
+    <a-scene vr-mode-ui="enabled: true">
         <a-assets>
-            <audio id="sliceSound" src="https://cdn.glitch.me/sounds/slice.mp3" preload="auto"></audio>
+            <audio id="bgMusic" src="https://cdn.glitch.com/b6b5/music1.mp3" crossorigin="anonymous"></audio>
         </a-assets>
 
-        <a-entity environment="preset: night; neonColor: cyan; ground: hills; lighting: point; grid: dots; groundColor: #111"></a-entity>
+        <a-entity environment="preset: night; neonColor: cyan; ground: hills; grid: dots; lighting: point;"></a-entity>
 
         <a-entity id="rig" position="0 1.6 0" look-controls>
             <a-entity camera>
-                
-                <a-entity id="cursor-dot"
-                          cursor="fuse: true; fuseTimeout: 5000"
+                <a-entity cursor="fuse: true; fuseTimeout: 3000"
                           position="0 0 -1"
-                          geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.02"
+                          geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
                           material="color: black; shader: flat"
                           raycaster="objects: .clickable">
-                    
-                    <a-animation begin="fusing" attribute="scale" fill="forwards" from="1 1 1" to="0.2 0.2 0.2" dur="5000"></a-animation>
-                    <a-animation begin="fusing" attribute="material.color" fill="forwards" from="black" to="#00ffff" dur="5000"></a-animation>
-                    <a-animation begin="mouseleave" attribute="scale" to="1 1 1" dur="200"></a-animation>
-                    <a-animation begin="mouseleave" attribute="material.color" to="black" dur="200"></a-animation>
+                    <a-ring color="#00ffff" radius-inner="0.01" radius-outer="0.015"
+                            animation__fusing="property: geometry.radiusOuter; from: 0.015; to: 0.005; dur: 3000; startEvents: fusing"
+                            animation__reset="property: geometry.radiusOuter; to: 0.015; dur: 200; startEvents: mouseleave">
+                    </a-ring>
                 </a-entity>
-
             </a-entity>
 
-            <a-entity id="saber-hand" position="0.4 -0.5 -0.8">
-                <a-cylinder height="0.25" radius="0.03" color="#0a0a0a" metalness="1" roughness="0.2"></a-cylinder>
-                
-                <a-cylinder id="blade" height="0.9" radius="0.025" color="#00ffff" emissive="#00ffff" emissiveIntensity="3" position="0 0.55 0">
-                    <a-sphere radius="0.025" position="0 0.45 0" color="#00ffff" emissive="#00ffff"></a-sphere>
+            <a-entity id="saber-hand" position="0.4 -0.5 -0.6">
+                <a-cylinder height="0.25" radius="0.03" color="#111" metalness="1"></a-cylinder>
+                <a-cylinder height="0.9" radius="0.02" color="#00ffff" emissive="#00ffff" emissiveIntensity="3" position="0 0.55 0">
+                    <a-sphere radius="0.02" position="0 0.45 0" color="#00ffff" emissive="#00ffff"></a-sphere>
                 </a-cylinder>
             </a-entity>
         </a-entity>
 
         <a-entity id="menu" position="0 1.5 -3">
-            <a-box id="start-btn" class="clickable" width="1.5" height="0.6" depth="0.1" color="#222" metalness="0.5"
-                   onclick="startGame()">
-                <a-text value="START LEVEL" align="center" position="0 0 0.12" color="cyan" width="4"></a-text>
-                <a-animation begin="mouseenter" attribute="material.emissive" from="#000" to="#111" dur="200"></a-animation>
-                <a-animation begin="mouseleave" attribute="material.emissive" to="#000" dur="200"></a-animation>
+            
+            <a-box id="play-btn" class="clickable" width="1.8" height="0.6" depth="0.1" color="#111"
+                   onclick="showDiff()">
+                <a-text value="PLAY GAME" align="center" position="0 0 0.06" color="cyan"></a-text>
             </a-box>
+
+            <a-entity id="bt-btn-group" position="0 -0.8 0">
+                <a-box id="bt-btn" class="clickable" width="1.8" height="0.5" depth="0.1" color="#222"
+                       onclick="connectBT()"
+                       animation__hover="property: material.color; from: #222; to: #ff00ff; dur: 300; startEvents: mouseenter"
+                       animation__leave="property: material.color; to: #222; dur: 300; startEvents: mouseleave">
+                    <a-text value="CONNECT SABER" align="center" position="0 0 0.06" color="white"></a-text>
+                </a-box>
+            </a-entity>
         </a-entity>
 
-        <a-entity id="game-elements" visible="false">
-            <a-box class="clickable" position="0 1.5 -15" color="red" 
-                   animation="property: position; to: 0 1.5 2; dur: 4000; easing: linear; loop: true">
-            </a-box>
+        <a-entity id="diffMenu" position="0 1.5 -3" visible="false">
+            <a-box class="clickable" position="-1.2 0 0" width="0.8" height="0.5" color="#00ff00" onclick="startGame(2000)"><a-text value="EASY" align="center" position="0 0 0.06"></a-text></a-box>
+            <a-box class="clickable" position="0 0 0" width="0.8" height="0.5" color="#ffff00" onclick="startGame(1000)"><a-text value="NORMAL" align="center" position="0 0 0.06"></a-text></a-box>
+            <a-box class="clickable" position="1.2 0 0" width="0.8" height="0.5" color="#ff0000" onclick="startGame(600)"><a-text value="HARD" align="center" position="0 0 0.06"></a-text></a-box>
         </a-entity>
+
+        <a-text id="score" value="SCORE: 0" position="0 3 -4" align="center" color="white" width="10"></a-text>
 
     </a-scene>
 
     <script>
+        let score = 0;
         const saber = document.querySelector('#saber-hand');
-        const menu = document.querySelector('#menu');
-        const gameElements = document.querySelector('#game-elements');
-
-        // Logic triggered after 5 seconds of gaze selection
-        function startGame() {
-            menu.setAttribute('visible', 'false');
-            gameElements.setAttribute('visible', 'true');
-            console.log("Level Started!");
+        
+        function showDiff() {
+            document.querySelector('#menu').setAttribute('visible', 'false');
+            document.querySelector('#diffMenu').setAttribute('visible', 'true');
         }
 
-        // WEB BLUETOOTH (Arduino Connection)
-        window.addEventListener('click', async () => {
-            // Unlock Motion Sensors for Head Tracking on Android 8
-            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission();
-            }
-
+        // The critical Bluetooth Function
+        async function connectBT() {
             try {
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ name: 'HC-05' }],
@@ -93,16 +86,42 @@
                     let val = new TextDecoder().decode(e.target.value);
                     let parts = val.split(',');
                     if(parts.length === 2) {
-                        // Map Arduino 0-300 range to 3D workspace
                         let x = (parseInt(parts[0]) - 150) / 100;
                         let y = (parseInt(parts[1]) - 150) / 100;
-                        saber.setAttribute('position', {x: x + 0.4, y: y - 0.5, z: -0.8});
+                        saber.setAttribute('position', {x: x + 0.4, y: y + 1.2, z: -0.6});
                     }
                 });
+                // Change button color to green when successful
+                document.querySelector('#bt-btn').setAttribute('color', '#00ff00');
             } catch (err) {
-                console.warn("Bluetooth Pairing Canceled or Failed: " + err);
+                console.log("BT Error: ", err);
             }
-        });
+        }
+
+        function startGame(speed) {
+            document.querySelector('#diffMenu').setAttribute('visible', 'false');
+            document.querySelector('#bgMusic').play();
+            setInterval(() => {
+                const target = document.createElement('a-box');
+                const isRed = Math.random() > 0.5;
+                target.setAttribute('color', isRed ? 'red' : 'blue');
+                target.setAttribute('position', `${(Math.random() * 2) - 1} 1.5 -15`);
+                target.setAttribute('animation', 'property: position; to: 0 1.5 2; dur: 4000; easing: linear');
+                document.querySelector('a-scene').appendChild(target);
+
+                const check = setInterval(() => {
+                    let tPos = target.getAttribute('position');
+                    let sPos = saber.getAttribute('position');
+                    let dist = Math.sqrt(Math.pow(tPos.x-sPos.x,2)+Math.pow(tPos.y-sPos.y,2)+Math.pow(tPos.z-sPos.z,2));
+                    if(dist < 0.6) {
+                        score += 10;
+                        document.querySelector('#score').setAttribute('value', 'SCORE: ' + score);
+                        target.remove(); clearInterval(check);
+                    }
+                    if(tPos.z > 1.5) { target.remove(); clearInterval(check); }
+                }, 50);
+            }, speed);
+        }
     </script>
 </body>
 </html>
